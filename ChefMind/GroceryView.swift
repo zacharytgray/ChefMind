@@ -1,5 +1,5 @@
 //
-//  InventoryView.swift
+//  GroceryView.swift
 //  ChefMind
 //
 //  Created by Zachary Gray on 8/15/24.
@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct InventoryView: View {
+struct GroceryView: View {
     @ObservedObject var viewModel: ViewModel
     @State private var isAddItemViewPresented = false
     
     var body: some View {
         NavigationView {
             List {
-                ForEach(viewModel.inventoryItems) { item in
+                ForEach(viewModel.groceryItems) { item in
                     HStack {
                         Text(item.name)
                         Spacer()
@@ -24,19 +24,24 @@ struct InventoryView: View {
                                 .foregroundColor(.gray)
                             Stepper("", value: Binding(
                                 get: { item.quantity },
-                                set: { newQuantity in
-                                    viewModel.updateQuantity(for: item, newQuantity: newQuantity, in: .inventory)
-                                }
+                                set: { viewModel.updateQuantity(for: item, newQuantity: $0, in: .grocery) }
                             ), in: 0...99)
                             .labelsHidden()
                         }
                     }
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            viewModel.moveToInventory(item)
+                        } label: {
+                            Label("Move to Inventory", systemImage: "cart.badge.plus")
+                        }.tint(.blue)
+                    }
                 }
                 .onDelete { indexSet in
-                    viewModel.removeItem(at: indexSet, from: .inventory)
+                    viewModel.removeItem(at: indexSet, from: .grocery)
                 }
             }
-            .navigationTitle("Inventory")
+            .navigationTitle("Grocery List")
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
                     Button(action: {
@@ -51,7 +56,7 @@ struct InventoryView: View {
                 }
             }
             .sheet(isPresented: $isAddItemViewPresented) {
-                AddItemView(viewModel: viewModel, list: .inventory)
+                AddItemView(viewModel: viewModel, list: .grocery)
             }
         }
     }

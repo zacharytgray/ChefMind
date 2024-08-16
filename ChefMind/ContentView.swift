@@ -8,17 +8,16 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var inventoryViewModel = InventoryViewModel()
-    @StateObject private var groceryListViewModel = GroceryListViewModel()
+    @StateObject private var sharedViewModel = ViewModel()
     
     var body: some View {
         TabView {
-            GroceryListView(viewModel: groceryListViewModel)
+            GroceryView(viewModel: sharedViewModel)
                 .tabItem {
                     Label("Grocery", systemImage: "cart")
                 }
             
-            InventoryView(viewModel: inventoryViewModel)
+            InventoryView(viewModel: sharedViewModel)
                 .tabItem {
                     Label("Inventory", systemImage: "cube.box")
                 }
@@ -27,11 +26,6 @@ struct ContentView: View {
                 .tabItem {
                     Label("Chat", systemImage: "message")
                 }
-        }
-        .onAppear {
-            groceryListViewModel.onMoveToInventory = { itemName in
-                inventoryViewModel.addItem(itemName)
-            }
         }
     }
 }
