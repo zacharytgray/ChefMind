@@ -34,9 +34,15 @@ class ChatViewModel: ObservableObject {
         sharedViewModel.inventoryItems.forEach { item in
             systemInstructions += "\n- Name: \(item.name), Qty: \(item.quantity)"
         }
+        
+        let welcomeStr: String = "Hey! I'm your AI Chef. I can see all your inventory items to help you plan your meals, prepare a particular dish, and suggest items to purchase. What can I do for you?"
             
-        memoryBuffer = [ChatCompletionParameters.Message(role: .system, content: .text(systemInstructions))]
+        memoryBuffer = [ChatCompletionParameters.Message(role: .system, content: .text(systemInstructions)), ChatCompletionParameters.Message(role: .assistant, content: .text(welcomeStr))]
+        
+        let aiWelcomeMsg = ChatMessage(content: welcomeStr, isUser: false)
+        self.UIMessages.append(aiWelcomeMsg)
     }
+    
 
     // Create new messages with: ChatCompletionParameters.Message(role: .system, content: .text(queryStr)
 
@@ -132,7 +138,7 @@ struct ChatView: View {
                 }
                 .padding()
             }
-            .navigationTitle("AI Chef Chat")
+            .navigationTitle("ChefMind Chat")
             .offset(y: -keyboardOffset)
             .animation(.easeOut(duration: 0.2), value: keyboardOffset)
         }
