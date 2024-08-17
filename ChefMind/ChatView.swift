@@ -8,8 +8,8 @@
 import SwiftUI
 import SwiftOpenAI
 
-struct ChatMessage: Identifiable, Equatable {
-    let id = UUID()
+struct ChatMessage: Identifiable, Equatable, Codable {
+    var id = UUID()
     let content: String
     let isUser: Bool
     
@@ -34,15 +34,37 @@ class ChatViewModel: ObservableObject {
         sharedViewModel.inventoryItems.forEach { item in
             systemInstructions += "\n- Name: \(item.name), Qty: \(item.quantity)"
         }
-        
-        let welcomeStr: String = "Hey! I'm your AI Chef. I can see all your inventory items to help you plan your meals, prepare a particular dish, and suggest items to purchase. What can I do for you?"
             
-        memoryBuffer = [ChatCompletionParameters.Message(role: .system, content: .text(systemInstructions)), ChatCompletionParameters.Message(role: .assistant, content: .text(welcomeStr))]
+        memoryBuffer = [ChatCompletionParameters.Message(role: .system, content: .text(systemInstructions))]
         
-        let aiWelcomeMsg = ChatMessage(content: welcomeStr, isUser: false)
-        self.UIMessages.append(aiWelcomeMsg)
+        // Load Chat History
+        UIMessages = sharedViewModel.chatHistory
+
+        if UIMessages.isEmpty {
+            addWelcomeMessage()
+        } else {
+            // Reconstruct memory buffer from chat history
+            for message in UIMessages {
+                let role: ChatCompletionParameters.Message.Role = message.isUser ? .user : .assistant
+                memoryBuffer.append(ChatCompletionParameters.Message(role: role, content: .text(message.content)))
+            }
+        }
     }
     
+    private func addWelcomeMessage() {
+        let welcomeStr = "Hey! I'm your AI Chef. I can see all your inventory items to help you plan your meals, prepare a particular dish, and suggest items to purchase. What can I do for you?"
+        let aiWelcomeMsg = ChatMessage(content: welcomeStr, isUser: false)
+        UIMessages.append(aiWelcomeMsg)
+        memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(welcomeStr)))
+        sharedViewModel.saveChatHistory(UIMessages)
+    }
+
+    func resetChat() {
+        UIMessages = []
+        memoryBuffer = memoryBuffer.prefix(1).map { $0 } // Keep only the system message
+        addWelcomeMessage()
+    }
+
 
     // Create new messages with: ChatCompletionParameters.Message(role: .system, content: .text(queryStr)
 
@@ -52,6 +74,7 @@ class ChatViewModel: ObservableObject {
         // Update UI messages on the main thread
         DispatchQueue.main.async {
             self.UIMessages.append(userMessage)
+            self.sharedViewModel.saveChatHistory(self.UIMessages)
         }
 
         let prompt = userMessage.content
@@ -59,8 +82,6 @@ class ChatViewModel: ObservableObject {
         let parameters = ChatCompletionParameters(messages: memoryBuffer, model: .gpt4omini)
 
         do {
-
-
             let chatCompletionObject = try await service.startChat(parameters: parameters)
             let chatCompletionStr = chatCompletionObject.choices[0].message.content
             
@@ -71,6 +92,7 @@ class ChatViewModel: ObservableObject {
             // Update UI messages on the main thread
             DispatchQueue.main.async {
                 self.UIMessages.append(aiMessage)
+                self.sharedViewModel.saveChatHistory(self.UIMessages)
             }
         } catch {
             print("Failed to get response: \(error)")
@@ -112,6 +134,9 @@ struct ChatView: View {
                     }
                     .onAppear {
                         scrollProxy = proxy
+                        if let lastMessage = chatViewModel.UIMessages.last {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
                     }
                 }
                 
@@ -139,6 +164,9 @@ struct ChatView: View {
                 .padding()
             }
             .navigationTitle("ChefMind Chat")
+            .navigationBarItems(trailing: Button("Reset") {
+                chatViewModel.resetChat()
+            })
             .offset(y: -keyboardOffset)
             .animation(.easeOut(duration: 0.2), value: keyboardOffset)
         }

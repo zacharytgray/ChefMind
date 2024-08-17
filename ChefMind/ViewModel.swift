@@ -10,9 +10,11 @@ import SwiftUI
 class ViewModel: ObservableObject {
     @Published var groceryItems: [GroceryItem] = []
     @Published var inventoryItems: [GroceryItem] = []
+    @Published var chatHistory: [ChatMessage] = []
 
     init() {
         loadItems()
+        loadChatHistory()
     }
 
     func addItem(_ item: GroceryItem, to list: ItemType) {
@@ -73,6 +75,20 @@ class ViewModel: ObservableObject {
         }
         saveItems()
     }
+    
+    func saveChatHistory(_ messages: [ChatMessage]) {
+        chatHistory = messages
+        if let encodedChat = try? JSONEncoder().encode(chatHistory) {
+            UserDefaults.standard.set(encodedChat, forKey: "chatHistory")
+        }
+    }
+
+    private func loadChatHistory() {
+        if let savedChatHistory = UserDefaults.standard.data(forKey: "chatHistory"),
+           let decodedChatHistory = try? JSONDecoder().decode([ChatMessage].self, from: savedChatHistory) {
+            chatHistory = decodedChatHistory
+        }
+    }
 
     private func saveItems() {
         if let encodedGrocery = try? JSONEncoder().encode(groceryItems) {
@@ -94,6 +110,7 @@ class ViewModel: ObservableObject {
             inventoryItems = decodedInventoryItems
         }
     }
+
 }
 
 enum ItemType {
