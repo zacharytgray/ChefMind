@@ -12,6 +12,7 @@ struct GroceryView: View {
     @State private var isAddItemViewPresented = false
     
     var body: some View {
+        
         NavigationView {
             List {
                 ForEach(viewModel.groceryItems) { item in
@@ -33,7 +34,7 @@ struct GroceryView: View {
                         Button {
                             viewModel.moveToInventory(item)
                         } label: {
-                            Label("Move to Inventory", systemImage: "cart.badge.plus")
+                            Label("Purchased", systemImage: "cart.badge.plus")
                         }
                         .tint(.orange)
                     }
@@ -43,19 +44,19 @@ struct GroceryView: View {
                 }
             }
             .navigationTitle("Grocery List")
-            .toolbar {
-                ToolbarItem(placement: .bottomBar) {
+            .overlay(
+                VStack {
+                    Spacer()
                     Button(action: {
                         isAddItemViewPresented = true
                     }) {
                         Image(systemName: "plus.circle.fill")
                             .resizable()
-                            .frame(width: 60, height: 60)
+                            .frame(width: 70, height: 70)
                             .foregroundColor(.purple)
-                            .padding(.bottom, 40)
+                    }.padding(.bottom, 40)
                     }
-                }
-            }
+                )
             .sheet(isPresented: $isAddItemViewPresented) {
                 AddItemView(viewModel: viewModel, list: .grocery)
                     .presentationDetents([.fraction(0.5)]) // This limits the sheet to 50% the screen height

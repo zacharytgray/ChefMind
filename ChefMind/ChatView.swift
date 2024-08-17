@@ -8,10 +8,14 @@
 import SwiftUI
 import SwiftOpenAI
 
-struct ChatMessage: Identifiable {
+struct ChatMessage: Identifiable, Equatable {
     let id = UUID()
     let content: String
     let isUser: Bool
+    
+    static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
+            lhs.id == rhs.id && lhs.content == rhs.content && lhs.isUser == rhs.isUser
+        }
 }
 
 class ChatViewModel: ObservableObject {
@@ -71,6 +75,10 @@ class ChatViewModel: ObservableObject {
 struct ChatView: View {
     @StateObject private var chatViewModel: ChatViewModel
     @State private var newMessage: String = ""
+    @State private var scrollProxy: ScrollViewProxy?
+    @State private var lastMessageId: UUID?
+    @FocusState private var isTextFieldFocused: Bool
+    @State private var keyboardOffset: CGFloat = 0
     
     init(sharedViewModel: ViewModel) {
         _chatViewModel = StateObject(wrappedValue: ChatViewModel(apiKey: Config.apiKey, sharedViewModel: sharedViewModel))
@@ -79,17 +87,34 @@ struct ChatView: View {
     var body: some View {
         NavigationView {
             VStack {
-                ScrollView {
-                    ForEach(chatViewModel.UIMessages) { message in
-                        ChatBubble(message: message)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack {
+                            ForEach(chatViewModel.UIMessages) { message in
+                                ChatBubble(message: message)
+                                    .id(message.id)
+                            }
+                        }
+                    }
+                    .onChange(of: chatViewModel.UIMessages) { oldMessages, newMessages in
+                        if let lastMessage = newMessages.last {
+                            lastMessageId = lastMessage.id
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                    .onAppear {
+                        scrollProxy = proxy
                     }
                 }
                 
                 HStack {
-                    TextField("Type a message", text: $newMessage).textFieldStyle(.roundedBorder)
-                    
-
+                    TextField("Type a message", text: $newMessage)
+                        .textFieldStyle(.roundedBorder)
                         .padding(15)
+                        .focused($isTextFieldFocused)
+                    
                     Button(action: {
                         Task {
                             let query = newMessage
@@ -108,6 +133,8 @@ struct ChatView: View {
                 .padding()
             }
             .navigationTitle("AI Chef Chat")
+            .offset(y: -keyboardOffset)
+            .animation(.easeOut(duration: 0.2), value: keyboardOffset)
         }
         .dismissKeyboardOnTap()
     }

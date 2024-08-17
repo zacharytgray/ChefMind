@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-let groceryColor = Color.blue
+let groceryColor = Color.purple
 let inventoryColor = Color.orange
 let chatColor = Color.mint
 let notSelectedColor = Color.gray
@@ -49,9 +49,6 @@ struct ContentView: View {
             selectedTab == 2 ? chatColor : notSelectedColor
         )
 
-    }
-    public func getSharedViewModel() -> ViewModel {
-        return sharedViewModel
     }
         
 }

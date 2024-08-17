@@ -37,19 +37,19 @@ struct InventoryView: View {
                 }
             }
             .navigationTitle("Inventory")
-            .toolbar {
-                ToolbarItem(placement: .bottomBar) {
+            .overlay(
+                VStack {
+                    Spacer()
                     Button(action: {
                         isAddItemViewPresented = true
                     }) {
                         Image(systemName: "plus.circle.fill")
                             .resizable()
-                            .frame(width: 60, height: 60)
+                            .frame(width: 70, height: 70)
                             .foregroundColor(.orange)
-                            .padding(.bottom, 40)
+                    }.padding(.bottom, 40)
                     }
-                }
-            }
+                )
             .sheet(isPresented: $isAddItemViewPresented) {
                 AddItemView(viewModel: viewModel, list: .inventory)
                     .presentationDetents([.fraction(0.5)]) // This limits the sheet to 50% the screen height
