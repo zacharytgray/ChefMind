@@ -45,13 +45,15 @@ struct InventoryView: View {
                         Image(systemName: "plus.circle.fill")
                             .resizable()
                             .frame(width: 60, height: 60)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.orange)
                             .padding(.bottom, 40)
                     }
                 }
             }
             .sheet(isPresented: $isAddItemViewPresented) {
                 AddItemView(viewModel: viewModel, list: .inventory)
+                    .presentationDetents([.fraction(0.5)]) // This limits the sheet to 50% the screen height
+
             }
         }
     }

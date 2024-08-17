@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+// Colors
+
+let lightPurple: Color = Color(red: 229/255, green: 204/255, blue: 255/255)
+let lightOrange: Color = Color(red: 255/255, green: 229/255, blue: 204/255)
+
+
 struct AddItemView: View {
     @ObservedObject var viewModel: ViewModel
     var list: ItemType
@@ -15,9 +21,10 @@ struct AddItemView: View {
     @FocusState private var isNameFieldFocused: Bool
     @Environment(\.presentationMode) var presentationMode
 
+
     var body: some View {
         VStack {
-            Text("Add New Item")
+            Text(list == .grocery ? "Add to Grocery List" : "Add to Inventory")
                 .font(.largeTitle)
                 .bold()
                 .padding(.top, 50)
@@ -38,29 +45,31 @@ struct AddItemView: View {
                     Text("Qty:")
                         .font(.title2)
                         .foregroundColor(.gray)
-                        .bold()
-                        .padding(.leading, 28)
+//                        .bold()
+                        .padding(.leading, 25)
 
                     Picker("Quantity", selection: $newItemQuantity) {
                         ForEach(1...99, id: \.self) { number in
                             Text("\(number)")
                                 .font(.title2)
-                                .bold()
+//                                .bold()
                         }
                     }
                     .pickerStyle(.wheel)
-                    .padding(.horizontal)
+                    .padding(.trailing)
                     .padding(.top, -30)
                     .frame(width: 100, height: 120)
                 }
                 .padding(.top)
-            }
+            }.padding(.bottom, 10)
 
             Spacer()
 
             Button(action: {
-                viewModel.addItem(GroceryItem(name: newItemName, quantity: newItemQuantity), to: list)
-                presentationMode.wrappedValue.dismiss()
+                if (!newItemName.isEmpty) {
+                    viewModel.addItem(GroceryItem(name: newItemName, quantity: newItemQuantity), to: list)
+                    presentationMode.wrappedValue.dismiss()
+                }
             }) {
                 Text("Add Item")
                     .font(.title2)
@@ -68,14 +77,22 @@ struct AddItemView: View {
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.blue)
+                    .background(
+                        newItemName.isEmpty && list == .grocery ? lightPurple :
+                        !newItemName.isEmpty && list == .grocery ? .purple :
+                        newItemName.isEmpty && list == .inventory ? lightOrange :
+                        !newItemName.isEmpty && list == .inventory ? .orange :
+                        Color.gray
+                    )
                     .cornerRadius(10)
             }
             .padding(.horizontal)
-            .padding(.bottom, 20)
+            .padding(.bottom, 30)
         }
+        .frame(height: UIScreen.main.bounds.height / 2.5)  // Set height to half the screen
         .onAppear {
             isNameFieldFocused = true
         }
     }
 }
+

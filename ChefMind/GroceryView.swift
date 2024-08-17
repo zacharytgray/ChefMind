@@ -34,7 +34,8 @@ struct GroceryView: View {
                             viewModel.moveToInventory(item)
                         } label: {
                             Label("Move to Inventory", systemImage: "cart.badge.plus")
-                        }.tint(.blue)
+                        }
+                        .tint(.orange)
                     }
                 }
                 .onDelete { indexSet in
@@ -50,13 +51,14 @@ struct GroceryView: View {
                         Image(systemName: "plus.circle.fill")
                             .resizable()
                             .frame(width: 60, height: 60)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.purple)
                             .padding(.bottom, 40)
                     }
                 }
             }
             .sheet(isPresented: $isAddItemViewPresented) {
                 AddItemView(viewModel: viewModel, list: .grocery)
+                    .presentationDetents([.fraction(0.5)]) // This limits the sheet to 50% the screen height
             }
         }
     }

@@ -49,6 +49,10 @@ class ViewModel: ObservableObject {
             addItem(item, to: .inventory)
         }
     }
+    
+    func getInventoryItems() -> [GroceryItem] {
+        return inventoryItems
+    }
 
     func updateQuantity(for item: GroceryItem, newQuantity: Int, in list: ItemType) {
         switch list {

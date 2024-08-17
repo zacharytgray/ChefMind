@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		06E405532C7005C80002BA2E /* SwiftOpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = 06E405522C7005C80002BA2E /* SwiftOpenAI */; };
+		06E4055D2C70F7330002BA2E /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 06E4055C2C70F7330002BA2E /* Secrets.plist */; };
+		06E405612C70F74D0002BA2E /* Secrets.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = 06E405602C70F74D0002BA2E /* Secrets.example.plist */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		06923AEE2C6F04B600A4C0D1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +33,8 @@
 		06923AD82C6F04B500A4C0D1 /* ChefMind.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChefMind.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		06923AED2C6F04B600A4C0D1 /* ChefMindTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChefMindTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		06923AF72C6F04B600A4C0D1 /* ChefMindUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChefMindUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		06E4055C2C70F7330002BA2E /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		06E405602C70F74D0002BA2E /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.example.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +60,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				06E405532C7005C80002BA2E /* SwiftOpenAI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +88,8 @@
 				06923AF02C6F04B600A4C0D1 /* ChefMindTests */,
 				06923AFA2C6F04B600A4C0D1 /* ChefMindUITests */,
 				06923AD92C6F04B500A4C0D1 /* Products */,
+				06E4055C2C70F7330002BA2E /* Secrets.plist */,
+				06E405602C70F74D0002BA2E /* Secrets.example.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +123,7 @@
 			);
 			name = ChefMind;
 			packageProductDependencies = (
+				06E405522C7005C80002BA2E /* SwiftOpenAI */,
 			);
 			productName = ChefMind;
 			productReference = 06923AD82C6F04B500A4C0D1 /* ChefMind.app */;
@@ -195,6 +207,9 @@
 			);
 			mainGroup = 06923ACF2C6F04B500A4C0D1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				06E405512C7005C80002BA2E /* XCRemoteSwiftPackageReference "SwiftOpenAI" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 06923AD92C6F04B500A4C0D1 /* Products */;
 			projectDirPath = "";
@@ -212,6 +227,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				06E4055D2C70F7330002BA2E /* Secrets.plist in Resources */,
+				06E405612C70F74D0002BA2E /* Secrets.example.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -560,6 +577,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		06E405512C7005C80002BA2E /* XCRemoteSwiftPackageReference "SwiftOpenAI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jamesrochabrun/SwiftOpenAI";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		06E405522C7005C80002BA2E /* SwiftOpenAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 06E405512C7005C80002BA2E /* XCRemoteSwiftPackageReference "SwiftOpenAI" */;
+			productName = SwiftOpenAI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 06923AD02C6F04B500A4C0D1 /* Project object */;
 }
