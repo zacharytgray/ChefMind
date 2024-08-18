@@ -90,7 +90,7 @@ class ViewModel: ObservableObject {
         }
     }
 
-    private func saveItems() {
+    public func saveItems() {
         if let encodedGrocery = try? JSONEncoder().encode(groceryItems) {
             UserDefaults.standard.set(encodedGrocery, forKey: "groceryItems")
         }

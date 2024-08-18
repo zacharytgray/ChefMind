@@ -64,49 +64,47 @@ class ChatViewModel: ObservableObject {
         memoryBuffer = memoryBuffer.prefix(1).map { $0 } // Keep only the system message
         addWelcomeMessage()
     }
-
-
     // Create new messages with: ChatCompletionParameters.Message(role: .system, content: .text(queryStr)
 
     func sendMessage(_ content: String) async {
-        let userMessage = ChatMessage(content: content, isUser: true)
-        
-        // Update UI messages on the main thread
-        DispatchQueue.main.async {
-            self.UIMessages.append(userMessage)
-            self.sharedViewModel.saveChatHistory(self.UIMessages)
-        }
+           await MainActor.run {
+               let userMessage = ChatMessage(content: content, isUser: true)
+               self.UIMessages.append(userMessage)
+               self.sharedViewModel.saveChatHistory(self.UIMessages)
+           }
 
-        let prompt = userMessage.content
-        memoryBuffer.append(ChatCompletionParameters.Message(role: .user, content: .text(prompt)))
-        let parameters = ChatCompletionParameters(messages: memoryBuffer, model: .gpt4omini)
+           let prompt = content
+           memoryBuffer.append(ChatCompletionParameters.Message(role: .user, content: .text(prompt)))
+           let parameters = ChatCompletionParameters(messages: memoryBuffer, model: .gpt4omini)
 
-        do {
-            let chatCompletionObject = try await service.startChat(parameters: parameters)
-            let chatCompletionStr = chatCompletionObject.choices[0].message.content
-            
-            memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(chatCompletionStr!)))
-                            
-            let aiMessage = ChatMessage(content: chatCompletionStr!, isUser: false)
-            
-            // Update UI messages on the main thread
-            DispatchQueue.main.async {
-                self.UIMessages.append(aiMessage)
-                self.sharedViewModel.saveChatHistory(self.UIMessages)
-            }
-        } catch {
-            print("Failed to get response: \(error)")
-        }
-    }
-}
+           do {
+               let chatCompletionObject = try await service.startChat(parameters: parameters)
+               let chatCompletionStr = chatCompletionObject.choices[0].message.content
+               
+               memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(chatCompletionStr!)))
+                               
+               let aiMessage = ChatMessage(content: chatCompletionStr!, isUser: false)
+               
+               await MainActor.run {
+                   self.UIMessages.append(aiMessage)
+                   self.sharedViewModel.saveChatHistory(self.UIMessages)
+               }
+           } catch {
+               print("Failed to get response: \(error)")
+           }
+       }
+   }
+
 
 struct ChatView: View {
     @StateObject private var chatViewModel: ChatViewModel
-    @State private var newMessage: String = ""
-    @State private var scrollProxy: ScrollViewProxy?
-    @State private var lastMessageId: UUID?
-    @FocusState private var isTextFieldFocused: Bool
-    @State private var keyboardOffset: CGFloat = 0
+        @State private var newMessage: String = ""
+        @State private var scrollProxy: ScrollViewProxy?
+        @State private var lastMessageId: UUID?
+        @FocusState private var isTextFieldFocused: Bool
+        @State private var keyboardOffset: CGFloat = 0
+        @State private var isSending: Bool = false
+
     
     init(sharedViewModel: ViewModel) {
         _chatViewModel = StateObject(wrappedValue: ChatViewModel(apiKey: Config.apiKey, sharedViewModel: sharedViewModel))
@@ -157,9 +155,11 @@ struct ChatView: View {
                     }) {
                         Image(systemName: "arrowshape.up.circle.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(.mint)
+                            .foregroundColor(isSending ? .gray : .green)
+
                     }
                     .padding(.trailing, 10)
+                    .disabled(isSending || newMessage.isEmpty)
                 }
                 .padding()
             }
@@ -167,11 +167,33 @@ struct ChatView: View {
             .navigationBarItems(trailing: Button("Reset") {
                 chatViewModel.resetChat()
             })
-            .offset(y: -keyboardOffset)
-            .animation(.easeOut(duration: 0.2), value: keyboardOffset)
+//            .offset(y: -keyboardOffset)
+//            .animation(.easeOut(duration: 0.2), value: keyboardOffset)
         }
         .dismissKeyboardOnTap()
     }
+    private func sendMessage() {
+           guard !newMessage.isEmpty && !isSending else { return }
+           
+           let messageToSend = newMessage
+           newMessage = ""
+           isSending = true
+           
+           Task {
+               await chatViewModel.sendMessage(messageToSend)
+               DispatchQueue.main.async {
+                   isSending = false
+               }
+           }
+       }
+       
+       private func resetChat() {
+           Task {
+               await MainActor.run {
+                   chatViewModel.resetChat()
+               }
+           }
+       }
 }
 
 struct ChatBubble: View {
@@ -182,7 +204,7 @@ struct ChatBubble: View {
             if message.isUser { Spacer() }
             Text(message.content)
                 .padding()
-                .background(message.isUser ? Color.gray : Color.mint)
+                .background(message.isUser ? Color.gray : Color.green)
                 .foregroundColor(.white)
                 .cornerRadius(10)
             if !message.isUser { Spacer() }
@@ -190,4 +212,5 @@ struct ChatBubble: View {
         .padding(.horizontal)
     }
 }
+
 

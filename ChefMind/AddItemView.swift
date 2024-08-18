@@ -11,7 +11,17 @@ import SwiftUI
 
 let lightPurple: Color = Color(red: 229/255, green: 204/255, blue: 255/255)
 let lightOrange: Color = Color(red: 255/255, green: 229/255, blue: 204/255)
+let darkPurple: Color = Color(red: 51/255, green: 0/255, blue: 102/255)
+let darkOrange: Color = Color(red: 102/255, green: 51/255, blue: 0/255)
 
+//newItemName.isEmpty && list == .grocery ? lightPurple :
+//!newItemName.isEmpty && list == .grocery ? .purple :
+//newItemName.isEmpty && list == .inventory ? lightOrange :
+//!newItemName.isEmpty && list == .inventory ? .orange :
+//Color.gray
+//
+//newItemName.isEmpty && list == .grocery ? lightPurple : Color.gray
+//(condition) ? color1 : color2
 
 struct AddItemView: View {
     @ObservedObject var viewModel: ViewModel
@@ -20,9 +30,13 @@ struct AddItemView: View {
     @State private var newItemQuantity: Int = 1
     @FocusState private var isNameFieldFocused: Bool
     @Environment(\.presentationMode) var presentationMode
-
-
+    @Environment(\.colorScheme) var colorScheme
+    
     var body: some View {
+        
+        let altPurple = (colorScheme == .dark ? darkPurple : lightPurple)
+        let altOrange = (colorScheme == .dark ? darkOrange : lightOrange)
+
         VStack {
             Text(list == .grocery ? "Add to Grocery List" : "Add to Inventory")
                 .font(.largeTitle)
@@ -66,10 +80,9 @@ struct AddItemView: View {
             Spacer()
 
             Button(action: {
-                if (!newItemName.isEmpty) {
-                    viewModel.addItem(GroceryItem(name: newItemName, quantity: newItemQuantity), to: list)
-                    presentationMode.wrappedValue.dismiss()
-                }
+                viewModel.addItem(GroceryItem(name: newItemName, quantity: newItemQuantity), to: list)
+                presentationMode.wrappedValue.dismiss()
+                
             }) {
                 Text("Add Item")
                     .font(.title2)
@@ -78,14 +91,15 @@ struct AddItemView: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(
-                        newItemName.isEmpty && list == .grocery ? lightPurple :
+                        newItemName.isEmpty && list == .grocery ? altPurple :
                         !newItemName.isEmpty && list == .grocery ? .purple :
-                        newItemName.isEmpty && list == .inventory ? lightOrange :
+                        newItemName.isEmpty && list == .inventory ? altOrange :
                         !newItemName.isEmpty && list == .inventory ? .orange :
                         Color.gray
                     )
                     .cornerRadius(10)
             }
+            .disabled(newItemName.isEmpty)
             .padding(.horizontal)
             .padding(.bottom, 30)
         }

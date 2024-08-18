@@ -9,7 +9,7 @@ import SwiftUI
 
 let groceryColor = Color.purple
 let inventoryColor = Color.orange
-let chatColor = Color.mint
+let chatColor = Color.green
 let notSelectedColor = Color.gray
 
 struct ContentView: View {

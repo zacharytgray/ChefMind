@@ -10,9 +10,11 @@ import SwiftUI
 struct GroceryView: View {
     @ObservedObject var viewModel: ViewModel
     @State private var isAddItemViewPresented = false
+    @State private var isEditViewPresented = false
+    @State private var editingItem: GroceryItem?
+    @State private var editedItemName: String = ""
     
     var body: some View {
-        
         NavigationView {
             List {
                 ForEach(viewModel.groceryItems) { item in
@@ -38,9 +40,24 @@ struct GroceryView: View {
                         }
                         .tint(.orange)
                     }
-                }
-                .onDelete { indexSet in
-                    viewModel.removeItem(at: indexSet, from: .grocery)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            if let index = viewModel.groceryItems.firstIndex(where: { $0.id == item.id }) {
+                                viewModel.removeItem(at: IndexSet(integer: index), from: .grocery)
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash.fill")
+                        }
+                        .tint(.red)
+                        Button {
+                            editingItem = item
+                            editedItemName = item.name
+                            isEditViewPresented = true
+                        } label: {
+                            Label("Edit", systemImage: "square.and.pencil")
+                        }
+                        .tint(.blue)
+                    }
                 }
             }
             .navigationTitle("Grocery List")
@@ -55,11 +72,26 @@ struct GroceryView: View {
                             .frame(width: 70, height: 70)
                             .foregroundColor(.purple)
                     }.padding(.bottom, 40)
-                    }
-                )
+                }
+            )
             .sheet(isPresented: $isAddItemViewPresented) {
                 AddItemView(viewModel: viewModel, list: .grocery)
-                    .presentationDetents([.fraction(0.5)]) // This limits the sheet to 50% the screen height
+                    .presentationDetents([.fraction(0.5)])
+            }
+            .alert("Edit Item", isPresented: $isEditViewPresented) {
+                TextField("Item Name", text: $editedItemName)
+                Button("Cancel", role: .cancel) {}
+                Button("Save") {
+                    if let editingItem = editingItem,
+                       let index = viewModel.groceryItems.firstIndex(where: { $0.id == editingItem.id }) {
+                        var updatedItem = editingItem
+                        updatedItem.name = editedItemName
+                        viewModel.groceryItems[index] = updatedItem
+                        viewModel.saveItems()
+                    }
+                }
+            } message: {
+                Text("Enter the new name for this item")
             }
         }
     }
