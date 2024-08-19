@@ -11,10 +11,14 @@ class ViewModel: ObservableObject {
     @Published var groceryItems: [GroceryItem] = []
     @Published var inventoryItems: [GroceryItem] = []
     @Published var chatHistory: [ChatMessage] = []
+    @Published var apiKey: String = ""
+    
+    private let apiKeyKey = "openAIAPIKey"
 
     init() {
         loadItems()
         loadChatHistory()
+        loadAPIKey()
     }
 
     func addItem(_ item: GroceryItem, to list: ItemType) {
@@ -108,6 +112,58 @@ class ViewModel: ObservableObject {
         if let savedInventoryItems = UserDefaults.standard.data(forKey: "inventoryItems"),
            let decodedInventoryItems = try? JSONDecoder().decode([GroceryItem].self, from: savedInventoryItems) {
             inventoryItems = decodedInventoryItems
+        }
+    }
+    
+    func saveAPIKey(_ key: String) {
+        let data = key.data(using: .utf8)!
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: apiKeyKey,
+            kSecValueData as String: data
+        ]
+        
+        SecItemDelete(query as CFDictionary)
+        
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status == errSecSuccess {
+            DispatchQueue.main.async {
+                self.apiKey = key
+            }
+        }
+    }
+    
+    func loadAPIKey() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: apiKeyKey,
+            kSecReturnData as String: true
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        if status == errSecSuccess {
+            if let data = result as? Data,
+               let key = String(data: data, encoding: .utf8) {
+                DispatchQueue.main.async {
+                    self.apiKey = key
+                }
+            }
+        }
+    }
+    
+    func deleteAPIKey() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: apiKeyKey
+        ]
+        
+        let status = SecItemDelete(query as CFDictionary)
+        if status == errSecSuccess || status == errSecItemNotFound {
+            DispatchQueue.main.async {
+                self.apiKey = ""
+            }
         }
     }
 

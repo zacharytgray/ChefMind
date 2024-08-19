@@ -10,11 +10,13 @@ import SwiftUI
 let groceryColor = Color.purple
 let inventoryColor = Color.orange
 let chatColor = Color.green
+let settingsColor = Color.blue
 let notSelectedColor = Color.gray
 
 struct ContentView: View {
     @StateObject private var sharedViewModel = ViewModel()
     @State private var selectedTab = 0
+    @AppStorage("openAIAPIKey") private var apiKey: String = ""
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -35,13 +37,27 @@ struct ContentView: View {
                     .tint(selectedTab == 1 ? inventoryColor : notSelectedColor)
                     .accentColor(selectedTab == 1 ? inventoryColor : notSelectedColor)
 
-                ChatView(sharedViewModel: sharedViewModel)
+                Group {
+                    if !sharedViewModel.apiKey.isEmpty {
+                        ChatView(sharedViewModel: sharedViewModel)
+                    } else {
+                        APIKeyPromptView()
+                    }
+
+                }
                     .tabItem {
                         Label("Chat", systemImage: "bubble.left.and.bubble.right")
                     }
                     .tag(2)
                     .tint(selectedTab == 2 ? chatColor : notSelectedColor)
                     .accentColor(selectedTab == 2 ? chatColor : notSelectedColor)
+                SettingsView(viewModel: sharedViewModel)
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape.fill")
+                    }
+                    .tag(3)
+                    .tint(selectedTab == 3 ? settingsColor : notSelectedColor)
+                    .accentColor(selectedTab == 3 ? settingsColor : notSelectedColor)
             }
                 .toolbarBackground(.visible, for: .tabBar)
             
@@ -50,10 +66,26 @@ struct ContentView: View {
         .accentColor(
             selectedTab == 0 ? groceryColor :
             selectedTab == 1 ? inventoryColor :
-            selectedTab == 2 ? chatColor : notSelectedColor
+            selectedTab == 2 ? chatColor :
+            selectedTab == 3 ? settingsColor :
+            notSelectedColor
         )
     }
         
+}
+
+struct APIKeyPromptView: View {
+    var body: some View {
+        VStack {
+            Text("Please enter your OpenAI API Key in the Settings tab to use the chat feature.")
+                .multilineTextAlignment(.center)
+                .padding()
+            
+            Image(systemName: "key")
+                .font(.system(size: 50))
+                .foregroundColor(.gray)
+        }
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {

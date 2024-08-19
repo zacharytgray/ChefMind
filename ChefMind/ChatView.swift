@@ -20,12 +20,13 @@ struct ChatMessage: Identifiable, Equatable, Codable {
 
 class ChatViewModel: ObservableObject {
     @Published var UIMessages: [ChatMessage] = []
+    @Published var error: String?
     private var memoryBuffer: [ChatCompletionParameters.Message]
-    private let service: OpenAIService
+    private var service: OpenAIService
     private let sharedViewModel: ViewModel
     
     init(apiKey: String, sharedViewModel: ViewModel) {
-        self.service = OpenAIServiceFactory.service(apiKey: Config.apiKey)
+        self.service = OpenAIServiceFactory.service(apiKey: apiKey)
         self.sharedViewModel = sharedViewModel
         
         var systemInstructions = "You are a helpful and enthusiastic cooking assistant on an app called ChefMind. You are about to be provided with a user's kitchen and pantry inventory, which they've entered in on this app. They can ask you anything about cooking, meal planning, etc. You are to stay on topic - do not deviate from the topic of cooking and ingredients. Use the provided inventory to help you answer any questions about recipe ideas, or to tell them if they have the right ingredients for a dish. Now, here are the user's inventory items:"
@@ -67,47 +68,60 @@ class ChatViewModel: ObservableObject {
     // Create new messages with: ChatCompletionParameters.Message(role: .system, content: .text(queryStr)
 
     func sendMessage(_ content: String) async {
-           await MainActor.run {
-               let userMessage = ChatMessage(content: content, isUser: true)
-               self.UIMessages.append(userMessage)
-               self.sharedViewModel.saveChatHistory(self.UIMessages)
-           }
+        await MainActor.run {
+            let userMessage = ChatMessage(content: content, isUser: true)
+            self.UIMessages.append(userMessage)
+            self.sharedViewModel.saveChatHistory(self.UIMessages)
+        }
 
-           let prompt = content
-           memoryBuffer.append(ChatCompletionParameters.Message(role: .user, content: .text(prompt)))
-           let parameters = ChatCompletionParameters(messages: memoryBuffer, model: .gpt4omini)
+        let prompt = content
+        memoryBuffer.append(ChatCompletionParameters.Message(role: .user, content: .text(prompt)))
+        let parameters = ChatCompletionParameters(messages: memoryBuffer, model: .gpt4omini)
 
-           do {
-               let chatCompletionObject = try await service.startChat(parameters: parameters)
-               let chatCompletionStr = chatCompletionObject.choices[0].message.content
-               
-               memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(chatCompletionStr!)))
-                               
-               let aiMessage = ChatMessage(content: chatCompletionStr!, isUser: false)
-               
-               await MainActor.run {
-                   self.UIMessages.append(aiMessage)
-                   self.sharedViewModel.saveChatHistory(self.UIMessages)
-               }
-           } catch {
-               print("Failed to get response: \(error)")
-           }
-       }
+        do {
+            let chatCompletionObject = try await service.startChat(parameters: parameters)
+            let chatCompletionStr = chatCompletionObject.choices[0].message.content
+            
+            memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(chatCompletionStr!)))
+                            
+            let aiMessage = ChatMessage(content: chatCompletionStr!, isUser: false)
+            
+            await MainActor.run {
+                self.UIMessages.append(aiMessage)
+                self.sharedViewModel.saveChatHistory(self.UIMessages)
+            }
+        } catch {
+            await MainActor.run {
+                self.error = "Failed to get response: \(error.localizedDescription)"
+            }
+            print("Failed to get response: \(error)")
+            let errorMessage = ChatMessage(content: "Failed to get response: Incorrect API key provided. You can find your API key at https://platform.openai.com/account/api-keys.", isUser: false)
+            await MainActor.run {
+                self.UIMessages.append(errorMessage)
+                self.sharedViewModel.saveChatHistory(self.UIMessages)
+            }
+            
+        }
+    }
+    func updateAPIKey(_ newKey: String) {
+         self.service = OpenAIServiceFactory.service(apiKey: newKey)
+     }
    }
 
 
 struct ChatView: View {
+    @ObservedObject var sharedViewModel: ViewModel
     @StateObject private var chatViewModel: ChatViewModel
-        @State private var newMessage: String = ""
-        @State private var scrollProxy: ScrollViewProxy?
-        @State private var lastMessageId: UUID?
-        @FocusState private var isTextFieldFocused: Bool
-        @State private var keyboardOffset: CGFloat = 0
-        @State private var isSending: Bool = false
+    @State private var newMessage: String = ""
+    @State private var scrollProxy: ScrollViewProxy?
+    @State private var lastMessageId: UUID?
+    @FocusState private var isTextFieldFocused: Bool
+    @State private var keyboardOffset: CGFloat = 0
+    @State private var isSending: Bool = false
 
-    
     init(sharedViewModel: ViewModel) {
-        _chatViewModel = StateObject(wrappedValue: ChatViewModel(apiKey: Config.apiKey, sharedViewModel: sharedViewModel))
+        self.sharedViewModel = sharedViewModel
+        _chatViewModel = StateObject(wrappedValue: ChatViewModel(apiKey: sharedViewModel.apiKey, sharedViewModel: sharedViewModel))
     }
     
     var body: some View {
@@ -167,10 +181,11 @@ struct ChatView: View {
             .navigationBarItems(trailing: Button("Reset") {
                 chatViewModel.resetChat()
             })
-//            .offset(y: -keyboardOffset)
-//            .animation(.easeOut(duration: 0.2), value: keyboardOffset)
         }
         .dismissKeyboardOnTap()
+        .onChange(of: sharedViewModel.apiKey) {
+            chatViewModel.updateAPIKey(sharedViewModel.apiKey)
+        }
     }
     private func sendMessage() {
            guard !newMessage.isEmpty && !isSending else { return }
@@ -204,7 +219,11 @@ struct ChatBubble: View {
             if message.isUser { Spacer() }
             Text(message.content)
                 .padding()
-                .background(message.isUser ? Color.gray : Color.green)
+                .background(
+                    message.content.hasPrefix("Failed to get response:") ? Color.red :
+                    message.isUser ? Color.gray :
+                    Color.green
+                )
                 .foregroundColor(.white)
                 .cornerRadius(10)
             if !message.isUser { Spacer() }
