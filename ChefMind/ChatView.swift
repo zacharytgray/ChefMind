@@ -64,10 +64,10 @@ class ChatViewModel: ObservableObject {
 
     func resetChat() {
         UIMessages = []
-//        memoryBuffer = memoryBuffer.prefix(1).map { $0 } // Keep only the system message
         memoryBuffer = []
         addWelcomeMessage()
     }
+
 
     func sendMessage(_ content: String) async {
         await MainActor.run {
@@ -80,7 +80,6 @@ class ChatViewModel: ObservableObject {
         let prompt = content
 
         do {
-            
             memoryBuffer.append(ModelContent(role: "user", parts: prompt))
             let chat = model.startChat(history: memoryBuffer)
             for try await chunk in chat.sendMessageStream(prompt) {
@@ -90,37 +89,37 @@ class ChatViewModel: ObservableObject {
                     }
                 }
             }
-//            let response = try await chat.sendMessage(prompt)
-            let aiMessage = ChatMessage(content: currentStreamingMessage, isUser: false)
             
             await MainActor.run {
+                if self.currentStreamingMessage.hasSuffix("\n") {
+                    self.currentStreamingMessage = String(self.currentStreamingMessage.dropLast())
+                }
+                let aiMessage = ChatMessage(content: self.currentStreamingMessage, isUser: false)
                 self.UIMessages.append(aiMessage)
-                memoryBuffer.append(ModelContent(role: "model", parts: aiMessage.content))
+                self.memoryBuffer.append(ModelContent(role: "model", parts: aiMessage.content))
                 self.currentStreamingMessage = ""
                 self.sharedViewModel.saveChatHistory(self.UIMessages)
             }
         } catch {
             await MainActor.run {
                 self.error = "Failed to get response: \(error.localizedDescription)"
-            }
-            print("Failed to get response: \(error)")
-            let errorMessage = ChatMessage(content: "Failed to get response: Bad API Key.", isUser: false)
-            await MainActor.run {
+                let errorMessage = ChatMessage(content: "Failed to get response: Bad API Key.", isUser: false)
                 self.UIMessages.append(errorMessage)
                 self.sharedViewModel.saveChatHistory(self.UIMessages)
             }
-            
+            print("Failed to get response: \(error)")
         }
     }
-    func updateAPIKey(_ newKey: String) {
-        var systemInstructions = "You are a helpful and enthusiastic cooking assistant on an app called ChefMind. You are about to be provided with a user's kitchen and pantry inventory, which they've entered in on this app. They can ask you anything about cooking, meal planning, etc. You are to stay on topic - do not deviate from the topic of cooking and ingredients. Use the provided inventory to help you answer any questions about recipe ideas, or to tell them if they have the right ingredients for a dish. Now, here are the user's inventory items:"
-        // Append inventory items to systemInstructions
-        sharedViewModel.inventoryItems.forEach { item in
-            systemInstructions += "\n- Name: \(item.name), Qty: \(item.quantity)"
-        }
-
-        self.model = GenerativeModel(name: "gemini-1.5-flash", apiKey: newKey, systemInstruction: systemInstructions)
-     }
+    
+//    func updateAPIKey(_ newKey: String) {
+//        var systemInstructions = "You are a helpful and enthusiastic cooking assistant on an app called ChefMind. You are about to be provided with a user's kitchen and pantry inventory, which they've entered in on this app. They can ask you anything about cooking, meal planning, etc. You are to stay on topic - do not deviate from the topic of cooking and ingredients. Use the provided inventory to help you answer any questions about recipe ideas, or to tell them if they have the right ingredients for a dish. Now, here are the user's inventory items:"
+//        // Append inventory items to systemInstructions
+//        sharedViewModel.inventoryItems.forEach { item in
+//            systemInstructions += "\n- Name: \(item.name), Qty: \(item.quantity)"
+//        }
+//
+//        self.model = GenerativeModel(name: "gemini-1.5-flash", apiKey: newKey, systemInstruction: systemInstructions)
+//     }
    }
 
 
@@ -133,6 +132,8 @@ struct ChatView: View {
     @FocusState private var isTextFieldFocused: Bool
     @State private var keyboardOffset: CGFloat = 0
     @State private var isSending: Bool = false
+    
+    
 
     init(sharedViewModel: ViewModel) {
         self.sharedViewModel = sharedViewModel
@@ -180,34 +181,22 @@ struct ChatView: View {
                         .padding(15)
                         .focused($isTextFieldFocused)
                     
-                    Button(action: {
-                        Task {
-                            let query = newMessage
-                            if !query.isEmpty {
-                                newMessage = ""
-                                await chatViewModel.sendMessage(query)
-                            }
-                        }
-                    }) {
+                    Button(action: sendMessage) {
                         Image(systemName: "arrowshape.up.circle.fill")
                             .font(.system(size: 30))
                             .foregroundColor(isSending ? .gray : .mint)
-
                     }
                     .padding(.trailing, 10)
                     .disabled(isSending || newMessage.isEmpty)
+
                 }
                 .padding()
             }
             .navigationTitle("ChefMind Chat")
-            .navigationBarItems(trailing: Button("Reset") {
-                chatViewModel.resetChat()
-            })
+            .navigationBarItems(trailing: Button("Reset", action: resetChat))
         }
         .dismissKeyboardOnTap()
-        .onChange(of: sharedViewModel.apiKey) {
-            chatViewModel.updateAPIKey(sharedViewModel.apiKey)
-        }
+
     }
     private func sendMessage() {
            guard !newMessage.isEmpty && !isSending else { return }

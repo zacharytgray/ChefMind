@@ -115,57 +115,68 @@ class ViewModel: ObservableObject {
         }
     }
     
-    func saveAPIKey(_ key: String) {
-        let data = key.data(using: .utf8)!
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: apiKeyKey,
-            kSecValueData as String: data
-        ]
-        
-        SecItemDelete(query as CFDictionary)
-        
-        let status = SecItemAdd(query as CFDictionary, nil)
-        if status == errSecSuccess {
-            DispatchQueue.main.async {
-                self.apiKey = key
-            }
-        }
-    }
+//    func saveAPIKey(_ key: String) {
+//        let data = key.data(using: .utf8)!
+//        let query: [String: Any] = [
+//            kSecClass as String: kSecClassGenericPassword,
+//            kSecAttrAccount as String: apiKeyKey,
+//            kSecValueData as String: data
+//        ]
+//        
+//        SecItemDelete(query as CFDictionary)
+//        
+//        let status = SecItemAdd(query as CFDictionary, nil)
+//        if status == errSecSuccess {
+//            DispatchQueue.main.async {
+//                self.apiKey = key
+//            }
+//        }
+//    }
+    
+//    func loadAPIKey() {
+//        let query: [String: Any] = [
+//            kSecClass as String: kSecClassGenericPassword,
+//            kSecAttrAccount as String: apiKeyKey,
+//            kSecReturnData as String: true
+//        ]
+//        
+//        var result: AnyObject?
+//        let status = SecItemCopyMatching(query as CFDictionary, &result)
+//        
+//        if status == errSecSuccess {
+//            if let data = result as? Data,
+//               let key = String(data: data, encoding: .utf8) {
+//                DispatchQueue.main.async {
+//                    self.apiKey = key
+//                }
+//            }
+//        }
+//    }
     
     func loadAPIKey() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: apiKeyKey,
-            kSecReturnData as String: true
-        ]
-        
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        
-        if status == errSecSuccess {
-            if let data = result as? Data,
-               let key = String(data: data, encoding: .utf8) {
-                DispatchQueue.main.async {
-                    self.apiKey = key
-                }
+        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+           let xml = FileManager.default.contents(atPath: path),
+           let plist = try? PropertyListSerialization.propertyList(from: xml, options: .mutableContainersAndLeaves, format: nil) as? [String: Any] {
+            
+            if let apiKey = plist["APIKey"] as? String {
+                self.apiKey = apiKey
             }
         }
     }
-    
-    func deleteAPIKey() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: apiKeyKey
-        ]
-        
-        let status = SecItemDelete(query as CFDictionary)
-        if status == errSecSuccess || status == errSecItemNotFound {
-            DispatchQueue.main.async {
-                self.apiKey = ""
-            }
-        }
-    }
+ 
+//    func deleteAPIKey() {
+//        let query: [String: Any] = [
+//            kSecClass as String: kSecClassGenericPassword,
+//            kSecAttrAccount as String: apiKeyKey
+//        ]
+//        
+//        let status = SecItemDelete(query as CFDictionary)
+//        if status == errSecSuccess || status == errSecItemNotFound {
+//            DispatchQueue.main.async {
+//                self.apiKey = ""
+//            }
+//        }
+//    }
 
 }
 

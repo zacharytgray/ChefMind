@@ -51,12 +51,14 @@ struct ContentView: View {
                     .tag(2)
                     .tint(selectedTab == 2 ? chatColor : notSelectedColor)
                     .accentColor(selectedTab == 2 ? chatColor : notSelectedColor)
-                SettingsView(viewModel: sharedViewModel)
+                RecipeView(sharedViewModel: sharedViewModel)
                     .tabItem {
-                        Label("Settings", systemImage: "gearshape.fill")
+                        Label("Recipes", systemImage: "fork.knife")
                     }
                     .tag(3)
-                    .tint(selectedTab == 3 ? settingsColor : notSelectedColor)
+                    .tint(
+                        selectedTab == 3 ? settingsColor : notSelectedColor
+                    )
                     .accentColor(selectedTab == 3 ? settingsColor : notSelectedColor)
             }
                 .toolbarBackground(.visible, for: .tabBar)
