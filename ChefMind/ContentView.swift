@@ -9,7 +9,7 @@ import SwiftUI
 
 let groceryColor = Color.purple
 let inventoryColor = Color.orange
-let chatColor = Color.green
+let chatColor = Color.mint
 let settingsColor = Color.blue
 let notSelectedColor = Color.gray
 

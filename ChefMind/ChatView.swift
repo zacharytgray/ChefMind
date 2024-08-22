@@ -6,7 +6,8 @@
 //
 
 import SwiftUI
-import SwiftOpenAI
+import GoogleGenerativeAI
+
 
 struct ChatMessage: Identifiable, Equatable, Codable {
     var id = UUID()
@@ -21,22 +22,21 @@ struct ChatMessage: Identifiable, Equatable, Codable {
 class ChatViewModel: ObservableObject {
     @Published var UIMessages: [ChatMessage] = []
     @Published var error: String?
-    private var memoryBuffer: [ChatCompletionParameters.Message]
-    private var service: OpenAIService
+    private var memoryBuffer: [ModelContent] = []
+    private var model: GoogleGenerativeAI.GenerativeModel
     private let sharedViewModel: ViewModel
+    @Published var currentStreamingMessage: String = ""
     
+
     init(apiKey: String, sharedViewModel: ViewModel) {
-        self.service = OpenAIServiceFactory.service(apiKey: apiKey)
         self.sharedViewModel = sharedViewModel
-        
+
         var systemInstructions = "You are a helpful and enthusiastic cooking assistant on an app called ChefMind. You are about to be provided with a user's kitchen and pantry inventory, which they've entered in on this app. They can ask you anything about cooking, meal planning, etc. You are to stay on topic - do not deviate from the topic of cooking and ingredients. Use the provided inventory to help you answer any questions about recipe ideas, or to tell them if they have the right ingredients for a dish. Now, here are the user's inventory items:"
-        
         // Append inventory items to systemInstructions
         sharedViewModel.inventoryItems.forEach { item in
             systemInstructions += "\n- Name: \(item.name), Qty: \(item.quantity)"
         }
-            
-        memoryBuffer = [ChatCompletionParameters.Message(role: .system, content: .text(systemInstructions))]
+        self.model = GenerativeModel(name: "gemini-1.5-flash", apiKey: apiKey, systemInstruction: systemInstructions)
         
         // Load Chat History
         UIMessages = sharedViewModel.chatHistory
@@ -46,48 +46,57 @@ class ChatViewModel: ObservableObject {
         } else {
             // Reconstruct memory buffer from chat history
             for message in UIMessages {
-                let role: ChatCompletionParameters.Message.Role = message.isUser ? .user : .assistant
-                memoryBuffer.append(ChatCompletionParameters.Message(role: role, content: .text(message.content)))
+                let role: String = message.isUser ? "user" : "model"
+                memoryBuffer.append(ModelContent(role: role, parts: message.content))
             }
         }
+
     }
+    
     
     private func addWelcomeMessage() {
         let welcomeStr = "Hey! I'm your AI Chef. I can see all your inventory items to help you plan your meals, prepare a particular dish, and suggest items to purchase. What can I do for you?"
         let aiWelcomeMsg = ChatMessage(content: welcomeStr, isUser: false)
         UIMessages.append(aiWelcomeMsg)
-        memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(welcomeStr)))
+        memoryBuffer.append(ModelContent(role: "model", parts: welcomeStr))
         sharedViewModel.saveChatHistory(UIMessages)
     }
 
     func resetChat() {
         UIMessages = []
-        memoryBuffer = memoryBuffer.prefix(1).map { $0 } // Keep only the system message
+//        memoryBuffer = memoryBuffer.prefix(1).map { $0 } // Keep only the system message
+        memoryBuffer = []
         addWelcomeMessage()
     }
-    // Create new messages with: ChatCompletionParameters.Message(role: .system, content: .text(queryStr)
 
     func sendMessage(_ content: String) async {
         await MainActor.run {
             let userMessage = ChatMessage(content: content, isUser: true)
             self.UIMessages.append(userMessage)
             self.sharedViewModel.saveChatHistory(self.UIMessages)
+            self.currentStreamingMessage = "" // Reset streaming message
         }
 
         let prompt = content
-        memoryBuffer.append(ChatCompletionParameters.Message(role: .user, content: .text(prompt)))
-        let parameters = ChatCompletionParameters(messages: memoryBuffer, model: .gpt4omini)
 
         do {
-            let chatCompletionObject = try await service.startChat(parameters: parameters)
-            let chatCompletionStr = chatCompletionObject.choices[0].message.content
             
-            memoryBuffer.append(ChatCompletionParameters.Message(role: .assistant, content: .text(chatCompletionStr!)))
-                            
-            let aiMessage = ChatMessage(content: chatCompletionStr!, isUser: false)
+            memoryBuffer.append(ModelContent(role: "user", parts: prompt))
+            let chat = model.startChat(history: memoryBuffer)
+            for try await chunk in chat.sendMessageStream(prompt) {
+                if let text = chunk.text {
+                    await MainActor.run {
+                        self.currentStreamingMessage += text
+                    }
+                }
+            }
+//            let response = try await chat.sendMessage(prompt)
+            let aiMessage = ChatMessage(content: currentStreamingMessage, isUser: false)
             
             await MainActor.run {
                 self.UIMessages.append(aiMessage)
+                memoryBuffer.append(ModelContent(role: "model", parts: aiMessage.content))
+                self.currentStreamingMessage = ""
                 self.sharedViewModel.saveChatHistory(self.UIMessages)
             }
         } catch {
@@ -95,7 +104,7 @@ class ChatViewModel: ObservableObject {
                 self.error = "Failed to get response: \(error.localizedDescription)"
             }
             print("Failed to get response: \(error)")
-            let errorMessage = ChatMessage(content: "Failed to get response: Incorrect API key provided. You can find your API key at https://platform.openai.com/account/api-keys.", isUser: false)
+            let errorMessage = ChatMessage(content: "Failed to get response: Bad API Key.", isUser: false)
             await MainActor.run {
                 self.UIMessages.append(errorMessage)
                 self.sharedViewModel.saveChatHistory(self.UIMessages)
@@ -104,7 +113,13 @@ class ChatViewModel: ObservableObject {
         }
     }
     func updateAPIKey(_ newKey: String) {
-         self.service = OpenAIServiceFactory.service(apiKey: newKey)
+        var systemInstructions = "You are a helpful and enthusiastic cooking assistant on an app called ChefMind. You are about to be provided with a user's kitchen and pantry inventory, which they've entered in on this app. They can ask you anything about cooking, meal planning, etc. You are to stay on topic - do not deviate from the topic of cooking and ingredients. Use the provided inventory to help you answer any questions about recipe ideas, or to tell them if they have the right ingredients for a dish. Now, here are the user's inventory items:"
+        // Append inventory items to systemInstructions
+        sharedViewModel.inventoryItems.forEach { item in
+            systemInstructions += "\n- Name: \(item.name), Qty: \(item.quantity)"
+        }
+
+        self.model = GenerativeModel(name: "gemini-1.5-flash", apiKey: newKey, systemInstruction: systemInstructions)
      }
    }
 
@@ -134,8 +149,15 @@ struct ChatView: View {
                                 ChatBubble(message: message)
                                     .id(message.id)
                             }
-                        }
-                    }
+                            // Display streaming message
+                               if !chatViewModel.currentStreamingMessage.isEmpty {
+                                   ChatBubble(message: ChatMessage(content: chatViewModel.currentStreamingMessage, isUser: false))
+                                       .id("streaming")
+                                       .transition(.opacity)
+                               }
+                           }
+                       }
+            
                     .onChange(of: chatViewModel.UIMessages) { oldMessages, newMessages in
                         if let lastMessage = newMessages.last {
                             lastMessageId = lastMessage.id
@@ -169,7 +191,7 @@ struct ChatView: View {
                     }) {
                         Image(systemName: "arrowshape.up.circle.fill")
                             .font(.system(size: 30))
-                            .foregroundColor(isSending ? .gray : .green)
+                            .foregroundColor(isSending ? .gray : .mint)
 
                     }
                     .padding(.trailing, 10)
@@ -220,9 +242,15 @@ struct ChatBubble: View {
             Text(message.content)
                 .padding()
                 .background(
-                    message.content.hasPrefix("Failed to get response:") ? Color.red :
-                    message.isUser ? Color.gray :
-                    Color.green
+                    Group {
+                        if message.content.hasPrefix("Failed to get response:") {
+                            LinearGradient(gradient: Gradient(colors: [Color.red.opacity(0.5), Color.red]), startPoint: .bottomLeading, endPoint: .topTrailing)
+                        } else if message.isUser {
+                            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.8)]), startPoint: .bottomLeading, endPoint: .topTrailing)
+                        } else {
+                            LinearGradient(gradient: Gradient(colors: [Color.mint.opacity(0.5), Color.mint.opacity(0.8)]), startPoint: .bottomLeading, endPoint: .topTrailing)
+                        }
+                    }
                 )
                 .foregroundColor(.white)
                 .cornerRadius(10)
@@ -231,5 +259,3 @@ struct ChatBubble: View {
         .padding(.horizontal)
     }
 }
-
-
