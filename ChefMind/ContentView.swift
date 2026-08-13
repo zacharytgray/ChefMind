@@ -36,7 +36,17 @@ struct ContentView: View {
                     .tag(1)
                     .tint(selectedTab == 1 ? inventoryColor : notSelectedColor)
                     .accentColor(selectedTab == 1 ? inventoryColor : notSelectedColor)
-
+                
+                RecipesListView(sharedViewModel: sharedViewModel)
+                    .tabItem {
+                        Label("Recipes", systemImage: "fork.knife")
+                    }
+                    .tag(3)
+                    .tint(
+                        selectedTab == 3 ? settingsColor : notSelectedColor
+                    )
+                    .accentColor(selectedTab == 3 ? settingsColor : notSelectedColor)
+                
                 Group {
                     if !sharedViewModel.apiKey.isEmpty {
                         ChatView(sharedViewModel: sharedViewModel)
@@ -51,15 +61,7 @@ struct ContentView: View {
                     .tag(2)
                     .tint(selectedTab == 2 ? chatColor : notSelectedColor)
                     .accentColor(selectedTab == 2 ? chatColor : notSelectedColor)
-                RecipeView(sharedViewModel: sharedViewModel)
-                    .tabItem {
-                        Label("Recipes", systemImage: "fork.knife")
-                    }
-                    .tag(3)
-                    .tint(
-                        selectedTab == 3 ? settingsColor : notSelectedColor
-                    )
-                    .accentColor(selectedTab == 3 ? settingsColor : notSelectedColor)
+   
             }
                 .toolbarBackground(.visible, for: .tabBar)
             

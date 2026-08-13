@@ -1,20 +1,31 @@
 //
-//  RecipeView.swift
+//  RecipesListView.swift
 //  ChefMind
 //
 //  Created by Zachary Gray on 8/22/24.
 //
 
 import SwiftUI
+import Foundation
 
-struct Recipe: Identifiable {
-    let id = UUID()
-    let name: String
-    let ingredients: [String]
+struct Recipe: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var ingredients: [String]
+    
+    
+    init(id: UUID = UUID(), name: String, ingredients: [String]) {
+        self.id = id
+        self.name = name
+        self.ingredients = ingredients
+    }
 }
 
-struct RecipeView: View {
+struct RecipesListView: View {
     private let sharedViewModel: ViewModel
+    @State private var isAddRecipeViewPresented = false
+
+
     @State private var recipes: [Recipe] = [
         Recipe(name: "Pasta Carbonara", ingredients: ["Spaghetti", "Eggs", "Pancetta", "Parmesan cheese", "Black pepper"]),
         Recipe(name: "Chicken Stir Fry", ingredients: ["Chicken breast", "Mixed vegetables", "Soy sauce", "Ginger", "Garlic"]),
@@ -34,6 +45,7 @@ struct RecipeView: View {
     
     init(sharedViewModel: ViewModel) {
         self.sharedViewModel = sharedViewModel
+        
     }
     
     var body: some View {
@@ -66,7 +78,7 @@ struct RecipeView: View {
                     .padding(.vertical, 10)
                 }
             }
-            .navigationTitle("Recipes")
+//            .navigatior
         }
     }
 }
@@ -74,6 +86,8 @@ struct RecipeView: View {
 struct RecipeCard: View {
     let recipe: Recipe
     let isExpanded: Bool
+    @State private var isAddRecipeViewPresented = false
+    @State private var isInfoViewPresented = false
      
      var body: some View {
          VStack {
@@ -87,7 +101,7 @@ struct RecipeCard: View {
                          .frame(height: 60)
                  }
                  .padding(8)  // Reduced internal padding
-                 .frame(width: 170, height: 130)
+                 .frame(width: 170, height: 100)
                  
             } else {
                 VStack(alignment: .leading, spacing: 8) {
@@ -100,25 +114,41 @@ struct RecipeCard: View {
                         .fontWeight(.bold)
                         .padding(.top, 8)
                     
-                    ForEach(recipe.ingredients, id: \.self) { ingredient in
+                    ForEach(recipe.ingredients.prefix(5), id: \.self) { ingredient in
                         Text("• \(ingredient)")
                             .font(.subheadline)
                     }
+                    if recipe.ingredients.count > 5 {
+                        Text("...")
+                            .font(.subheadline)
+                            .italic()
+                    }
+                    Button(action: {
+                        isInfoViewPresented = true
+                    }) {
+                        Label("Recipe Info", systemImage: "info.circle.fill")
+                    }
+                    // Add Another button in hstack with first button to "cook now" and skip info panel
                 }
                 .padding()
+                .frame(width: 170)
+                .sheet(isPresented: $isInfoViewPresented) {
+                    RecipeInfoView(recipe: recipe)
+                        .presentationDetents([.fraction(0.5)])
+
+                }
             }
         }
          .frame(maxWidth: .infinity)
-             .aspectRatio(isExpanded ? nil : 1, contentMode: .fit)
-             .background(Color.mint.opacity(0.5))
-             .cornerRadius(12)
-             .shadow(radius: 4)
+         .aspectRatio(isExpanded ? nil : 1, contentMode: .fit)
+         .background(LinearGradient(gradient: Gradient(colors: [Color.mint.opacity(0.5), Color.mint]), startPoint: .bottomLeading, endPoint: .topTrailing))
+         .cornerRadius(12)
 
     }
 }
 
-struct RecipeView_Previews: PreviewProvider {
+struct RecipesListView_Previews: PreviewProvider {
     static var previews: some View {
-        RecipeView(sharedViewModel: ViewModel())
+        RecipesListView(sharedViewModel: ViewModel())
     }
 }

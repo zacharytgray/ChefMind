@@ -72,11 +72,12 @@ struct GroceryView: View {
                             .frame(width: 70, height: 70)
                             .foregroundColor(.purple)
                     }.padding(.bottom, 40)
-                }
-            )
+                    }
+                )
             .sheet(isPresented: $isAddItemViewPresented) {
-                AddItemView(viewModel: viewModel, list: .grocery)
-                    .presentationDetents([.fraction(0.5)])
+                AddItemView(viewModel: viewModel, list: .inventory)
+                    .presentationDetents([.fraction(0.5)]) // This limits the sheet to 50% the screen height
+
             }
             .alert("Edit Item", isPresented: $isEditViewPresented) {
                 TextField("Item Name", text: $editedItemName)

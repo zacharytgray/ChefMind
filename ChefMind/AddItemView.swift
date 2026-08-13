@@ -20,7 +20,6 @@ struct AddItemView: View {
     var list: ItemType
     @State private var newItemName: String = ""
     @State private var newItemQuantity: Int = 1
-//    @FocusState private var isNameFieldFocused: Bool
     @FocusState private var focusedField: Field?
     enum Field {
            case nameField
@@ -100,11 +99,7 @@ struct AddItemView: View {
                 .padding(.bottom, 30)
         }
         .onAppear {
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-//                    isNameFieldFocused = true
-//                }
             focusedField = .nameField  // Set focus to the name field
-            
         }
     }
 }

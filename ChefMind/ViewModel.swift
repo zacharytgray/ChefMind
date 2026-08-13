@@ -11,6 +11,7 @@ class ViewModel: ObservableObject {
     @Published var groceryItems: [GroceryItem] = []
     @Published var inventoryItems: [GroceryItem] = []
     @Published var chatHistory: [ChatMessage] = []
+    @State private var recipes: [Recipe] = []
     @Published var apiKey: String = ""
     
     private let apiKeyKey = "openAIAPIKey"
@@ -19,6 +20,7 @@ class ViewModel: ObservableObject {
         loadItems()
         loadChatHistory()
         loadAPIKey()
+        loadRecipes()
     }
 
     func addItem(_ item: GroceryItem, to list: ItemType) {
@@ -115,43 +117,19 @@ class ViewModel: ObservableObject {
         }
     }
     
-//    func saveAPIKey(_ key: String) {
-//        let data = key.data(using: .utf8)!
-//        let query: [String: Any] = [
-//            kSecClass as String: kSecClassGenericPassword,
-//            kSecAttrAccount as String: apiKeyKey,
-//            kSecValueData as String: data
-//        ]
-//        
-//        SecItemDelete(query as CFDictionary)
-//        
-//        let status = SecItemAdd(query as CFDictionary, nil)
-//        if status == errSecSuccess {
-//            DispatchQueue.main.async {
-//                self.apiKey = key
-//            }
-//        }
-//    }
+    private func loadRecipes() {
+        if let savedRecipes = UserDefaults.standard.data(forKey: "recipes"),
+           let decodedRecipes = try? JSONDecoder().decode([Recipe].self, from: savedRecipes) {
+            recipes = decodedRecipes
+        }
+    }
     
-//    func loadAPIKey() {
-//        let query: [String: Any] = [
-//            kSecClass as String: kSecClassGenericPassword,
-//            kSecAttrAccount as String: apiKeyKey,
-//            kSecReturnData as String: true
-//        ]
-//        
-//        var result: AnyObject?
-//        let status = SecItemCopyMatching(query as CFDictionary, &result)
-//        
-//        if status == errSecSuccess {
-//            if let data = result as? Data,
-//               let key = String(data: data, encoding: .utf8) {
-//                DispatchQueue.main.async {
-//                    self.apiKey = key
-//                }
-//            }
-//        }
-//    }
+    private func saveRecipes() {
+        if let encodedRecipes = try? JSONEncoder().encode(recipes) {
+            UserDefaults.standard.set(encodedRecipes, forKey: "recipes")
+        }
+    }
+
     
     func loadAPIKey() {
         if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
@@ -163,20 +141,6 @@ class ViewModel: ObservableObject {
             }
         }
     }
- 
-//    func deleteAPIKey() {
-//        let query: [String: Any] = [
-//            kSecClass as String: kSecClassGenericPassword,
-//            kSecAttrAccount as String: apiKeyKey
-//        ]
-//        
-//        let status = SecItemDelete(query as CFDictionary)
-//        if status == errSecSuccess || status == errSecItemNotFound {
-//            DispatchQueue.main.async {
-//                self.apiKey = ""
-//            }
-//        }
-//    }
 
 }
 
